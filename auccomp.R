@@ -90,6 +90,19 @@ Simpleesttime <- system.time(
   }
 )[3]
 
+# test a ranking function that leverages data.table:::rank
+rankest <- rep(0, iter)
+set.seed(8675309)
+ranktime <- system.time(
+  for (i in 1:iter) {
+    dat <- data.frame(y=rbinom(100, 1, .2), x=rnorm(100))
+    rprob <- mean(base::rank(dat$x)[dat$y==1])
+    n1 <- sum(dat$y)
+    n0 <- sum(dat$y==0)
+    rankest[i] <- (rprob-(n1+1)/2)/n0
+  }
+)[3]
+
 # do they all give equivalent estimates?
 summary(ROCRest - pROCest)
 summary(ROCRest - AUCest)
@@ -97,10 +110,12 @@ summary(ROCRest - PerfMeasest)
 summary(ROCRest - Hmiscest)
 summary(ROCRest - glmnetest)
 summary(ROCRest - Simpleest)
+summary(ROCRest - rankest)
 
 timings <- data.frame(ROCR=ROCRtime, pROC=pROCtime, AUC=AUCtime,
                       PerfMeas=PerfMeastime, Hmisc=Hmisctime,
-                      glmnet=glmnettime, Simpleest=Simpleesttime)
+                      glmnet=glmnettime, Simpleest=Simpleesttime,
+                      rankest=ranktime)
 timings
 
 # # precision recall
