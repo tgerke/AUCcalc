@@ -4,6 +4,7 @@
 library(pROC)
 library(ROCR)
 library(PerfMeas)
+library(glmnet) #note that this masks auc() from pROC
 
 # log which versions are installed
 sessionInfo()
@@ -11,53 +12,69 @@ sessionInfo()
 ##############################################################################
 # simulate binomial y with p=.2 and standard normal x
 
-iter <- 1e4
+iter <- 1e3
 
 # test ROCR package
 ROCRest <- rep(0, iter)
 set.seed(8675309)
-system.time(
+ROCRtime <- system.time(
   for (i in 1:iter) {
     dat <- data.frame(y=rbinom(100, 1, .2), x=rnorm(100))
     ROCRest[i] <- performance(prediction(dat$x, dat$y), "auc")@y.values[[1]]
   }
-)
+)[3]
 
 # test pROC package
 pROCest <- rep(0, iter)
 set.seed(8675309)
-system.time(
+pROCtime <- system.time(
   for (i in 1:iter) {
     dat <- data.frame(y=rbinom(100, 1, .2), x=rnorm(100))
-    pROCest[i] <- auc(response=dat$y, predictor=dat$x, direction="<")
+    pROCest[i] <- pROC:::auc(response=dat$y, predictor=dat$x, direction="<")
   }
-)
+)[3]
 
 # test PerfMeas package
 PerfMeasest <- rep(0, iter)
 set.seed(8675309)
-system.time(
+PerfMeastime <- system.time(
   for (i in 1:iter) {
     dat <- data.frame(y=rbinom(100, 1, .2), x=rnorm(100))
     PerfMeasest[i] <- AUC.single(dat$x, dat$y)
   }
-)
+)[3]
+
+# test glmnet package
+glmnetest <- rep(0, iter)
+set.seed(8675309)
+glmnettime <- system.time(
+  for (i in 1:iter) {
+    dat <- data.frame(y=rbinom(100, 1, .2), x=rnorm(100))
+    glmnetest[i] <- glmnet:::auc(y=dat$y, prob=dat$x)
+  }
+)[3]
 
 # test a simple one-liner
 Simpleest <- rep(0, iter)
 set.seed(8675309)
-system.time(
+Simpleesttime <- system.time(
   for (i in 1:iter) {
     dat <- data.frame(y=rbinom(100, 1, .2), x=rnorm(100))
     Simpleest[i] <- sum(vapply(dat$x[which(dat$y==1)], 
                                function(z) sum(z>dat$x[which(dat$y==0)]), 0))/sum(dat$y)/sum(dat$y==0)
   }
-)
+)[3]
 
 # do they all give equivalent estimates?
 summary(ROCRest - pROCest)
 summary(ROCRest - PerfMeasest)
+summary(ROCRest - glmnetest)
 summary(ROCRest - Simpleest)
+
+timings <- data.frame(ROCR=ROCRtime, pROC=pROCtime, 
+                      PerfMeas=PerfMeastime, glmnet=glmnettime,
+                      Simpleest=Simpleesttime)
+timings
 
 # # precision recall
 # precrec <- precision.at.all.recall.levels(dat$x, dat$y)
