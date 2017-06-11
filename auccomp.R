@@ -5,6 +5,8 @@ library(pROC)
 library(ROCR)
 library(PerfMeas)
 library(glmnet) #note that this masks auc() from pROC
+library(AUC) #so does this
+library(Hmisc)
 
 # log which versions are installed
 sessionInfo()
@@ -34,6 +36,16 @@ pROCtime <- system.time(
   }
 )[3]
 
+# test AUC package
+AUCest <- rep(0, iter)
+set.seed(8675309)
+AUCtime <- system.time(
+  for (i in 1:iter) {
+    dat <- data.frame(y=rbinom(100, 1, .2), x=rnorm(100))
+    AUCest[i] <- AUC:::auc(AUC:::roc(dat$x, as.factor(dat$y)))
+  }
+)[3]
+
 # test PerfMeas package
 PerfMeasest <- rep(0, iter)
 set.seed(8675309)
@@ -41,6 +53,16 @@ PerfMeastime <- system.time(
   for (i in 1:iter) {
     dat <- data.frame(y=rbinom(100, 1, .2), x=rnorm(100))
     PerfMeasest[i] <- AUC.single(dat$x, dat$y)
+  }
+)[3]
+
+# test Hmisc package
+Hmiscest <- rep(0, iter)
+set.seed(8675309)
+Hmisctime <- system.time(
+  for (i in 1:iter) {
+    dat <- data.frame(y=rbinom(100, 1, .2), x=rnorm(100))
+    Hmiscest[i] <- somers2(dat$x, dat$y)[1]
   }
 )[3]
 
@@ -70,13 +92,15 @@ Simpleesttime <- system.time(
 
 # do they all give equivalent estimates?
 summary(ROCRest - pROCest)
+summary(ROCRest - AUCest)
 summary(ROCRest - PerfMeasest)
+summary(ROCRest - Hmiscest)
 summary(ROCRest - glmnetest)
 summary(ROCRest - Simpleest)
 
-timings <- data.frame(ROCR=ROCRtime, pROC=pROCtime, 
-                      PerfMeas=PerfMeastime, glmnet=glmnettime,
-                      Simpleest=Simpleesttime)
+timings <- data.frame(ROCR=ROCRtime, pROC=pROCtime, AUC=AUCtime,
+                      PerfMeas=PerfMeastime, Hmisc=Hmisctime,
+                      glmnet=glmnettime, Simpleest=Simpleesttime)
 timings
 
 # # precision recall
