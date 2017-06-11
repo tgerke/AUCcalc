@@ -12,7 +12,7 @@ sessionInfo()
 ##############################################################################
 # simulate binomial y with p=.2 and standard normal x
 
-iter <- 1e3
+iter <- 1e4
 
 # test ROCR package
 ROCRest <- rep(0, iter)
@@ -54,14 +54,17 @@ glmnettime <- system.time(
   }
 )[3]
 
-# test a simple one-liner
+# test a simpler function
 Simpleest <- rep(0, iter)
 set.seed(8675309)
 Simpleesttime <- system.time(
   for (i in 1:iter) {
     dat <- data.frame(y=rbinom(100, 1, .2), x=rnorm(100))
-    Simpleest[i] <- sum(vapply(dat$x[which(dat$y==1)], 
-                               function(z) sum(z>dat$x[which(dat$y==0)]), 0))/sum(dat$y)/sum(dat$y==0)
+    x1 <- dat$x[dat$y==1]
+    x0 <- dat$x[dat$y==0]
+    n1 <- length(x1)
+    n0 <- length(x0)
+    Simpleest[i] <- sum(vapply(x1, function(z) sum(z>x0), 0))/n1/n0
   }
 )[3]
 
