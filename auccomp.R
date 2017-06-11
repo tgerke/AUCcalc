@@ -6,6 +6,7 @@ library(ROCR)
 library(PerfMeas)
 library(glmnet) #note that this masks auc() from pROC
 library(AUC) #so does this
+library(precrec) # and this
 library(Hmisc)
 
 # log which versions are installed
@@ -53,6 +54,16 @@ PerfMeastime <- system.time(
   for (i in 1:iter) {
     dat <- data.frame(y=rbinom(100, 1, .2), x=rnorm(100))
     PerfMeasest[i] <- AUC.single(dat$x, dat$y)
+  }
+)[3]
+
+# test precrec package
+precrecest <- rep(0, iter)
+set.seed(8675309)
+precrectime <- system.time(
+  for (i in 1:iter) {
+    dat <- data.frame(y=rbinom(100, 1, .2), x=rnorm(100))
+    precrecest[i] <- precrec::auc(evalmod(scores=dat$x, labels=dat$y))[1,4]
   }
 )[3]
 
@@ -107,15 +118,16 @@ ranktime <- system.time(
 summary(ROCRest - pROCest)
 summary(ROCRest - AUCest)
 summary(ROCRest - PerfMeasest)
+summary(ROCRest - precrecest)
 summary(ROCRest - Hmiscest)
 summary(ROCRest - glmnetest)
 summary(ROCRest - Simpleest)
 summary(ROCRest - rankest)
 
 timings <- data.frame(ROCR=ROCRtime, pROC=pROCtime, AUC=AUCtime,
-                      PerfMeas=PerfMeastime, Hmisc=Hmisctime,
-                      glmnet=glmnettime, Simpleest=Simpleesttime,
-                      rankest=ranktime)
+                      PerfMeas=PerfMeastime, precrec=precrectime,
+                      Hmisc=Hmisctime, glmnet=glmnettime,
+                      Simpleest=Simpleesttime, rankest=ranktime)
 timings
 
 # # precision recall
